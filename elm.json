@@ -2,7 +2,7 @@
     "type": "package",
     "name": "icidasset/binary",
     "summary": "Work with binary data.",
-    "license": "BSD-3-Clause",
+    "license": "MIT",
     "version": "1.0.0",
     "exposed-modules": [
         "Binary"
