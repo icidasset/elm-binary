@@ -1,6 +1,6 @@
 {
     "type": "package",
-    "name": "icidasset/binary",
+    "name": "icidasset/elm-binary",
     "summary": "Work with binary data.",
     "license": "MIT",
     "version": "1.0.0",
