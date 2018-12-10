@@ -63,10 +63,10 @@ type Bits
 
 {-| Convert a hex string to list of binary numbers.
 
-    >>> toIntegers (fromHex "15")
+    >>> fromHex "15" |> toIntegers
     [ 1, 0, 1, 0, 1 ]
 
-    >>> toIntegers (fromHex "2C0")
+    >>> fromHex "2C0" |> toIntegers
     [ 1, 0, 1, 1, 0, 0, 0, 0, 0, 0 ]
 
 -}
@@ -88,10 +88,10 @@ fromHex hex =
 
 {-| Convert a list of binary numbers to a hex string.
 
-    >>> toHex (fromIntegers [ 1, 0, 1, 0, 1 ])
+    >>> toHex <| fromIntegers [ 1, 0, 1, 0, 1 ]
     "15"
 
-    >>> toHex (fromIntegers [ 1, 0, 1, 1, 0, 0, 0, 0, 0, 0 ])
+    >>> toHex <| fromIntegers [ 1, 0, 1, 1, 0, 0, 0, 0, 0, 0 ]
     "2C0"
 
 -}
@@ -126,8 +126,8 @@ toHex (Bits bits) =
 Everything below zero and zero itself becomes a `0` bit,
 and everything above zero becomes a `1` bit.
 
-    >>> fromIntegers [ 1, 0, 0, 0 ]
-    fromHex "8"
+    >>> fromIntegers [ 1, 0, 0, 0 ] |> toHex
+    "8"
 
 -}
 fromIntegers : List Int -> Bits
@@ -137,7 +137,7 @@ fromIntegers =
 
 {-| Convert `Bits` to a list of integers.
 
-    >>> toIntegers (fromHex "8")
+    >>> toIntegers <| fromHex "8"
     [ 1, 0, 0, 0 ]
 
 -}
@@ -148,8 +148,8 @@ toIntegers (Bits bits) =
 
 {-| Convert a list of booleans to `Bits`.
 
-    >>> fromBooleans [ True, False, False, False ]
-    fromIntegers [ 1, 0, 0, 0 ]
+    >>> fromBooleans [ True, False, False, False ] |> toHex
+    "8"
 
 -}
 fromBooleans : List Bool -> Bits
@@ -159,7 +159,7 @@ fromBooleans =
 
 {-| Convert `Bits` to a list of booleans.
 
-    >>> toBooleans (fromHex "8")
+    >>> toBooleans <| fromHex "8"
     [ True, False, False, False ]
 
 -}
@@ -231,10 +231,11 @@ xor a b =
 
 {-| NOT operator.
 
-    -- NOT 0111  (decimal 7)
-    --   = 1000  (decimal 8)
+    -- NOT 0111 (decimal 7)
+    --   = 1000 (decimal 8)
 
-    >>> Binary.not (fromIntegers [ 0, 1, 1, 1 ])
+    >>> Binary.not
+    ..>   (fromIntegers [ 0, 1, 1, 1 ])
     fromIntegers [ 1, 0, 0, 0 ]
 
 -}
@@ -249,9 +250,8 @@ not =
 
 {-| Arithmetic/Logical left shift.
 
-    --   00010111 (decimal +23)
-    -- = 00101110 (decimal +46)
-
+    -- LEFTSHIFT 00010111 (decimal 23)
+    --         = 00101110 (decimal 46)
 
     >>> [ 0, 0, 0, 1, 0, 1, 1, 1 ]
     ..>   |> fromIntegers
@@ -267,9 +267,8 @@ shiftLeftBy n =
 
 {-| Arithmetic right shift.
 
-    --   10010111 (decimal −105)
-    -- = 11001011 (decimal −53)
-
+    -- ARI-RIGHTSHIFT 10010111 (decimal 151)
+    --              = 11001011 (decimal 203)
 
     >>> [ 1, 0, 0, 1, 0, 1, 1, 1 ]
     ..>   |> fromIntegers
@@ -299,6 +298,9 @@ shiftRightBy_ n bits =
 
 
 {-| Logical right shift.
+
+    -- LOG-RIGHTSHIFT 10010111 (decimal 151)
+    --              = 00001011 (decimal 11)
 
     >>> [ 0, 0, 0, 1, 0, 1, 1, 1 ]
     ..>   |> fromIntegers
@@ -438,7 +440,9 @@ dropLeadingZeros =
 
 {-| Makes two sequences isometric (equal in size).
 
-    >>> makeIsometric (fromIntegers [ 0, 1, 0 ]) (fromIntegers [ 1, 0, 0, 0 ])
+    >>> makeIsometric
+    ..>   (fromIntegers [ 0, 1, 0 ])
+    ..>   (fromIntegers [ 1, 0, 0, 0 ])
     ( fromIntegers [ 0, 0, 1, 0 ]
     , fromIntegers [ 1, 0, 0, 0 ]
     )
