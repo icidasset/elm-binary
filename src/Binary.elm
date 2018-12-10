@@ -1,9 +1,9 @@
 module Binary exposing
     ( Bits
-    , fromHex, toHex, fromIntegers, toIntegers, fromBooleans, toBooleans
+    , fromHex, toHex, fromIntegers, toIntegers, fromBooleans, toBooleans, fromDecimal, toDecimal
     , and, or, xor, not
-    , shiftLeftBy, shiftRightBy, shiftRightZfBy, rotateLeft, rotateRight
-    , add
+    , shiftLeftBy, shiftRightBy, shiftRightZfBy, rotateLeftBy, rotateRightBy
+    , add, subtract
     , ensureBits, dropLeadingZeros, makeIsometric
     )
 
@@ -14,7 +14,7 @@ module Binary exposing
 
 # Convertors
 
-@docs fromHex, toHex, fromIntegers, toIntegers, fromBooleans, toBooleans
+@docs fromHex, toHex, fromIntegers, toIntegers, fromBooleans, toBooleans, fromDecimal, toDecimal
 
 
 # Bitwise Operators
@@ -24,12 +24,12 @@ module Binary exposing
 
 # Bit Shifting
 
-@docs shiftLeftBy, shiftRightBy, shiftRightZfBy, rotateLeft, rotateRight
+@docs shiftLeftBy, shiftRightBy, shiftRightZfBy, rotateLeftBy, rotateRightBy
 
 
 # Mathematical Operators
 
-@docs add
+@docs add, subtract
 
 
 # Utilities
@@ -166,6 +166,53 @@ fromBooleans =
 toBooleans : Bits -> List Bool
 toBooleans (Bits bits) =
     bits
+
+
+{-| Convert a decimal to `Bits`.
+
+    >>> fromDecimal 8 |> toIntegers
+    [ 1, 0, 0, 0 ]
+
+-}
+fromDecimal : Int -> Bits
+fromDecimal =
+    fromDecimal_ [] >> fromIntegers
+
+
+fromDecimal_ : List Int -> Int -> List Int
+fromDecimal_ acc n =
+    let
+        ( x, bit ) =
+            ( n // 2, remainderBy 2 n )
+
+        bits =
+            modBy 2 bit :: acc
+    in
+    if x > 0 then
+        fromDecimal_ bits x
+
+    else
+        bits
+
+
+{-| Convert `Bits` to a decimal.
+
+    >>> toDecimal <| fromIntegers [ 1, 0, 0, 0 ]
+    8
+
+-}
+toDecimal : Bits -> Int
+toDecimal (Bits bits) =
+    Bits bits
+        |> toIntegers
+        |> List.foldl
+            (\bit ( x, exponent ) ->
+                ( (2 ^ exponent) * bit + x
+                , exponent - 1
+                )
+            )
+            ( 0, List.length bits - 1 )
+        |> Tuple.first
 
 
 
@@ -324,15 +371,15 @@ shiftRightZfBy n =
 _NOTE: Make sure your binary sequence is of the correct size before rotating!
 Rotating 8 bits is not always the same as, for example, 16 bits._
 
-    >>> rotateLeft 1 (ensureBits 32 <| fromHex "17")
+    >>> rotateLeftBy 1 (ensureBits 32 <| fromHex "17")
     ensureBits 32 (fromHex "2E")
 
-    >>> rotateLeft 2 (ensureBits 32 <| fromHex "96")
+    >>> rotateLeftBy 2 (ensureBits 32 <| fromHex "96")
     ensureBits 32 (fromHex "258")
 
 -}
-rotateLeft : Int -> Bits -> Bits
-rotateLeft n =
+rotateLeftBy : Int -> Bits -> Bits
+rotateLeftBy n =
     map (\bits -> List.drop n bits ++ List.take n bits)
 
 
@@ -341,18 +388,18 @@ rotateLeft n =
 _NOTE: Make sure your binary sequence is of the correct size before rotating!
 Rotating 8 bits is not always the same as, for example, 16 bits._
 
-    >>> rotateRight 1 (ensureBits 64 <| fromHex "17")
+    >>> rotateRightBy 1 (ensureBits 64 <| fromHex "17")
     ensureBits 64 (fromHex "800000000000000B")
 
-    >>> rotateRight 1 (ensureBits 32 <| fromHex "96")
+    >>> rotateRightBy 1 (ensureBits 32 <| fromHex "96")
     ensureBits 32 (fromHex "4B")
 
-    >>> rotateRight 5 (ensureBits 32 <| fromHex "96")
+    >>> rotateRightBy 5 (ensureBits 32 <| fromHex "96")
     ensureBits 32 (fromHex "B0000004")
 
 -}
-rotateRight : Int -> Bits -> Bits
-rotateRight n =
+rotateRightBy : Int -> Bits -> Bits
+rotateRightBy n =
     map (\bits -> List.drop (List.length bits - n) bits ++ List.take (List.length bits - n) bits)
 
 
@@ -362,10 +409,19 @@ rotateRight n =
 
 {-| Add two sets of bits together.
 
+    -- ADD 1011
+    --     1011
+    --  = 10110
+
     >>> add
     ..>   (fromIntegers [ 1, 0, 1, 1 ])
     ..>   (fromIntegers [ 1, 0, 1, 1 ])
     fromIntegers [ 1, 0, 1, 1, 0  ]
+
+    >>> add
+    ..>   (fromIntegers [ 1, 1, 1, 0, 1 ])
+    ..>   (fromIntegers [ 1, 0, 1, 0 ])
+    fromIntegers [ 1, 0, 0, 1, 1, 1  ]
 
 -}
 add : Bits -> Bits -> Bits
@@ -408,6 +464,87 @@ add_ ( x, y ) { bits, carryOver } =
     else
         -- 0 + 0 + 0
         { bits = False :: bits, carryOver = False }
+
+
+{-| Subtract two sets of bits from each other.
+
+    -- SUBTRACT 1011
+    --          11
+    --        = 1010
+
+    >>> subtract
+    ..>   (fromIntegers [ 1, 0, 1, 1 ])
+    ..>   (fromIntegers [ 1, 1 ])
+    fromIntegers [ 1, 0, 0, 0  ]
+
+    >>> subtract
+    ..>   (fromIntegers [ 1, 0, 0, 0, 1 ])
+    ..>   (fromIntegers [ 0, 0, 1, 0, 0 ])
+    fromIntegers [ 0, 1, 1, 0, 1  ]
+
+-}
+subtract : Bits -> Bits -> Bits
+subtract a b =
+    makeIsometric a b
+        |> (\( Bits c, Bits d ) ->
+                subtract_
+                    { bits = []
+                    , minuend = c
+                    , subtrahend = d
+                    }
+           )
+        |> .bits
+        |> Bits
+
+
+subtract_ :
+    { bits : List Bool, minuend : List Bool, subtrahend : List Bool }
+    -> { bits : List Bool, minuend : List Bool, subtrahend : List Bool }
+subtract_ { bits, minuend, subtrahend } =
+    case ( List.unconsLast minuend, List.unconsLast subtrahend ) of
+        ( Just ( a, minuend_ ), Just ( b, subtrahend_ ) ) ->
+            let
+                maybeIdx =
+                    List.findIndex identity minuend_
+
+                ( bit, newSeqA ) =
+                    if a == True && b == False then
+                        ( True
+                        , minuend_
+                        )
+
+                    else if a == True && b == True then
+                        ( False
+                        , minuend_
+                        )
+
+                    else if b == True && isJust maybeIdx then
+                        let
+                            idx =
+                                Maybe.withDefault 0 maybeIdx
+                        in
+                        ( True
+                        , List.drop idx minuend_
+                            ++ [ False ]
+                            ++ List.repeat (List.length minuend_ - idx - 1) True
+                        )
+
+                    else
+                        ( False
+                        , minuend_
+                        )
+            in
+            subtract_
+                { bits = bit :: bits
+                , minuend = newSeqA
+                , subtrahend = subtrahend_
+                }
+
+        _ ->
+            { bits = bits
+            , minuend = []
+            , subtrahend = []
+            }
 
 
 
@@ -477,6 +614,16 @@ ifThenElse bool a b =
 
     else
         b
+
+
+isJust : Maybe a -> Bool
+isJust m =
+    case m of
+        Just _ ->
+            True
+
+        Nothing ->
+            False
 
 
 map : (List Bool -> List Bool) -> Bits -> Bits
