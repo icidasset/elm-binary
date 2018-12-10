@@ -1,6 +1,6 @@
 module Binary exposing
     ( Bits
-    , fromHex, toHex, fromIntegers, toIntegers, fromBooleans, toBooleans, fromDecimal, toDecimal
+    , fromHex, toHex, fromDecimal, toDecimal, fromIntegers, toIntegers, fromBooleans, toBooleans
     , and, or, xor, not
     , shiftLeftBy, shiftRightBy, shiftRightZfBy, rotateLeftBy, rotateRightBy
     , add, subtract
@@ -14,7 +14,7 @@ module Binary exposing
 
 # Convertors
 
-@docs fromHex, toHex, fromIntegers, toIntegers, fromBooleans, toBooleans, fromDecimal, toDecimal
+@docs fromHex, toHex, fromDecimal, toDecimal, fromIntegers, toIntegers, fromBooleans, toBooleans
 
 
 # Bitwise Operators
@@ -63,11 +63,8 @@ type Bits
 
 {-| Convert a hex string to list of binary numbers.
 
-    >>> fromHex "15" |> toIntegers
-    [ 1, 0, 1, 0, 1 ]
-
-    >>> fromHex "2C0" |> toIntegers
-    [ 1, 0, 1, 1, 0, 0, 0, 0, 0, 0 ]
+    >>> fromHex "8" |> toIntegers
+    [ 1, 0, 0, 0 ]
 
 -}
 fromHex : String -> Bits
@@ -88,11 +85,8 @@ fromHex hex =
 
 {-| Convert a list of binary numbers to a hex string.
 
-    >>> toHex <| fromIntegers [ 1, 0, 1, 0, 1 ]
-    "15"
-
-    >>> toHex <| fromIntegers [ 1, 0, 1, 1, 0, 0, 0, 0, 0, 0 ]
-    "2C0"
+    >>> toHex <| fromIntegers [ 1, 0, 0, 0 ]
+    "8"
 
 -}
 toHex : Bits -> String
@@ -119,53 +113,6 @@ toHex (Bits bits) =
             )
         |> List.dropWhile ((==) '0')
         |> String.fromList
-
-
-{-| Convert a list of integers to `Bits`.
-
-Everything below zero and zero itself becomes a `0` bit,
-and everything above zero becomes a `1` bit.
-
-    >>> fromIntegers [ 1, 0, 0, 0 ] |> toHex
-    "8"
-
--}
-fromIntegers : List Int -> Bits
-fromIntegers =
-    List.map (\i -> ifThenElse (i <= 0) False True) >> Bits
-
-
-{-| Convert `Bits` to a list of integers.
-
-    >>> toIntegers <| fromHex "8"
-    [ 1, 0, 0, 0 ]
-
--}
-toIntegers : Bits -> List Int
-toIntegers (Bits bits) =
-    List.map (\b -> ifThenElse (b == False) 0 1) bits
-
-
-{-| Convert a list of booleans to `Bits`.
-
-    >>> fromBooleans [ True, False, False, False ] |> toHex
-    "8"
-
--}
-fromBooleans : List Bool -> Bits
-fromBooleans =
-    Bits
-
-
-{-| Convert `Bits` to a list of booleans.
-
-    >>> toBooleans <| fromHex "8"
-    [ True, False, False, False ]
-
--}
-toBooleans : Bits -> List Bool
-toBooleans (Bits bits) =
-    bits
 
 
 {-| Convert a decimal to `Bits`.
@@ -213,6 +160,53 @@ toDecimal (Bits bits) =
             )
             ( 0, List.length bits - 1 )
         |> Tuple.first
+
+
+{-| Convert a list of integers to `Bits`.
+
+Everything below zero and zero itself becomes a `0` bit,
+and everything above zero becomes a `1` bit.
+
+    >>> fromIntegers [ 1, 0, 0, 0 ] |> toHex
+    "8"
+
+-}
+fromIntegers : List Int -> Bits
+fromIntegers =
+    List.map (\i -> ifThenElse (i <= 0) False True) >> Bits
+
+
+{-| Convert `Bits` to a list of integers.
+
+    >>> toIntegers <| fromHex "8"
+    [ 1, 0, 0, 0 ]
+
+-}
+toIntegers : Bits -> List Int
+toIntegers (Bits bits) =
+    List.map (\b -> ifThenElse (b == False) 0 1) bits
+
+
+{-| Convert a list of booleans to `Bits`.
+
+    >>> fromBooleans [ True, False, False, False ] |> toHex
+    "8"
+
+-}
+fromBooleans : List Bool -> Bits
+fromBooleans =
+    Bits
+
+
+{-| Convert `Bits` to a list of booleans.
+
+    >>> toBooleans <| fromHex "8"
+    [ True, False, False, False ]
+
+-}
+toBooleans : Bits -> List Bool
+toBooleans (Bits bits) =
+    bits
 
 
 
