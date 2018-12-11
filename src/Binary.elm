@@ -4,7 +4,7 @@ module Binary exposing
     , and, or, xor, not
     , shiftLeftBy, shiftRightBy, shiftRightZfBy, rotateLeftBy, rotateRightBy
     , add, subtract
-    , ensureBits, dropLeadingZeros, makeIsometric
+    , concat, dropLeadingZeros, ensureBits, makeIsometric
     )
 
 {-|
@@ -34,7 +34,7 @@ module Binary exposing
 
 # Utilities
 
-@docs ensureBits, dropLeadingZeros, makeIsometric
+@docs concat, dropLeadingZeros, ensureBits, makeIsometric
 
 -}
 
@@ -545,16 +545,21 @@ subtract_ { bits, minuend, subtrahend } =
 -- UTILITIES
 
 
-{-| Ensure the binary sequence length is of certain size.
+{-| Concat multiple binary sequences.
 
-    >>> ensureBits 4 (fromIntegers [ 1, 0 ])
-    fromIntegers [ 0, 0, 1, 0 ]
+    >>> [ fromIntegers [ 1, 0, 0, 0 ]
+    ..> , fromIntegers [ 0, 1, 0, 1 ]
+    ..> ]
+    ..>   |> concat
+    ..>   |> toDecimal
+    133
 
 -}
-ensureBits : Int -> Bits -> Bits
-ensureBits size (Bits bits) =
-    bits
-        |> (++) (List.repeat (max 0 (size - List.length bits)) False)
+concat : List Bits -> Bits
+concat list =
+    list
+        |> List.map (\(Bits bits) -> bits)
+        |> List.concat
         |> Bits
 
 
@@ -567,6 +572,19 @@ ensureBits size (Bits bits) =
 dropLeadingZeros : Bits -> Bits
 dropLeadingZeros =
     map (List.dropWhile ((==) False))
+
+
+{-| Ensure the binary sequence length is of certain size.
+
+    >>> ensureBits 4 (fromIntegers [ 1, 0 ])
+    fromIntegers [ 0, 0, 1, 0 ]
+
+-}
+ensureBits : Int -> Bits -> Bits
+ensureBits size (Bits bits) =
+    bits
+        |> (++) (List.repeat (max 0 (size - List.length bits)) False)
+        |> Bits
 
 
 {-| Makes two sequences isometric (equal in size).
