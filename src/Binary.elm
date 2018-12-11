@@ -4,7 +4,7 @@ module Binary exposing
     , and, or, xor, not
     , shiftLeftBy, shiftRightBy, shiftRightZfBy, rotateLeftBy, rotateRightBy
     , add, subtract
-    , concat, dropLeadingZeros, ensureBits, makeIsometric
+    , chunksOf, concat, dropLeadingZeros, ensureBits, makeIsometric, width
     )
 
 {-|
@@ -34,7 +34,7 @@ module Binary exposing
 
 # Utilities
 
-@docs concat, dropLeadingZeros, ensureBits, makeIsometric
+@docs chunksOf, concat, dropLeadingZeros, ensureBits, makeIsometric, width
 
 -}
 
@@ -545,6 +545,23 @@ subtract_ { bits, minuend, subtrahend } =
 -- UTILITIES
 
 
+{-| Split the binary sequence in multiple chunks.
+
+    >>> fromIntegers [ 1, 0, 0, 0, 1, 0, 1, 0 ]
+    ..>   |> chunksOf 4
+    ..>   |> List.map toIntegers
+    [ [ 1, 0, 0, 0 ]
+    , [ 1, 0, 1, 0 ]
+    ]
+
+-}
+chunksOf : Int -> Bits -> List Bits
+chunksOf n (Bits bits) =
+    bits
+        |> List.greedyGroupsOf n
+        |> List.map Bits
+
+
 {-| Concat multiple binary sequences.
 
     >>> [ fromIntegers [ 1, 0, 0, 0 ]
@@ -606,6 +623,18 @@ makeIsometric (Bits a) (Bits b) =
     ( ensureBits size (Bits a)
     , ensureBits size (Bits b)
     )
+
+
+{-| Get the amount of bits in a binary sequence.
+
+    >>> fromIntegers [ 1, 0, 0, 0 ]
+    ..>   |> width
+    4
+
+-}
+width : Bits -> Int
+width (Bits bits) =
+    List.length bits
 
 
 
