@@ -1,6 +1,11 @@
 # Changelog
 
 
+#### 1.2.1
+
+- Does no longer drop leading zeros when using `fromHex` and/or `toHex`.
+
+
 #### 1.2.0
 
 - Added `chunksOf` function.

@@ -3,7 +3,7 @@
     "name": "icidasset/elm-binary",
     "summary": "Work with binary data.",
     "license": "MIT",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "exposed-modules": [
         "Binary"
     ],

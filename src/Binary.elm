@@ -80,7 +80,6 @@ fromHex hex =
             )
         |> List.concat
         |> Bits
-        |> dropLeadingZeros
 
 
 {-| Convert a list of binary numbers to a hex string.
@@ -111,7 +110,6 @@ toHex (Bits bits) =
                     |> Maybe.map Tuple.first
                     |> Maybe.withDefault '0'
             )
-        |> List.dropWhile ((==) '0')
         |> String.fromList
 
 
