@@ -4,7 +4,7 @@ module Binary exposing
     , and, or, xor, not
     , shiftLeftBy, shiftRightBy, shiftRightZfBy, rotateLeftBy, rotateRightBy
     , add, subtract
-    , chunksOf, concat, dropLeadingZeros, ensureBits, makeIsometric, width
+    , append, chunksOf, concat, dropLeadingZeros, ensureBits, makeIsometric, width
     )
 
 {-|
@@ -34,7 +34,7 @@ module Binary exposing
 
 # Utilities
 
-@docs chunksOf, concat, dropLeadingZeros, ensureBits, makeIsometric, width
+@docs append, chunksOf, concat, dropLeadingZeros, ensureBits, makeIsometric, width
 
 -}
 
@@ -541,6 +541,19 @@ subtract_ { bits, minuend, subtrahend } =
 
 
 -- UTILITIES
+
+
+{-| Merge two binary sequences.
+
+    >>> append
+    ..>   (fromIntegers [ 1, 0, 0, 0 ])
+    ..>   (fromIntegers [ 1, 0, 1, 0 ])
+    fromIntegers [ 1, 0, 0, 0, 1, 0, 1, 0 ]
+
+-}
+append : Bits -> Bits -> Bits
+append (Bits a) (Bits b) =
+    Bits (List.append a b)
 
 
 {-| Split the binary sequence in multiple chunks.

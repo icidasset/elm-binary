@@ -1,6 +1,11 @@
 # Changelog
 
 
+#### 1.3.0
+
+- Added `append` function.
+
+
 #### 1.2.1
 
 - Does no longer drop leading zeros when using `fromHex` and/or `toHex`.
