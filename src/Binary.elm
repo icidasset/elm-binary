@@ -1,20 +1,20 @@
 module Binary exposing
-    ( Bits
-    , fromHex, toHex, fromDecimal, toDecimal, fromIntegers, toIntegers, fromBooleans, toBooleans
+    ( Bits, empty
+    , fromHex, toHex, fromDecimal, toDecimal, fromIntegers, toIntegers, fromBooleans, toBooleans, fromString, toString
     , and, or, xor, not
     , shiftLeftBy, shiftRightBy, shiftRightZfBy, rotateLeftBy, rotateRightBy
     , add, subtract
-    , append, chunksOf, concat, dropLeadingZeros, ensureBits, makeIsometric, width
+    , append, chunksOf, concat, dropLeadingZeros, ensureSize, makeIsometric, width
     )
 
 {-|
 
-@docs Bits
+@docs Bits, empty
 
 
-# Convertors
+# Converters
 
-@docs fromHex, toHex, fromDecimal, toDecimal, fromIntegers, toIntegers, fromBooleans, toBooleans
+@docs fromHex, toHex, fromDecimal, toDecimal, fromIntegers, toIntegers, fromBooleans, toBooleans, fromString, toString
 
 
 # Bitwise Operators
@@ -34,7 +34,7 @@ module Binary exposing
 
 # Utilities
 
-@docs append, chunksOf, concat, dropLeadingZeros, ensureBits, makeIsometric, width
+@docs append, chunksOf, concat, dropLeadingZeros, ensureSize, makeIsometric, width
 
 -}
 
@@ -48,13 +48,20 @@ import List.Extra as List
 
 {-| **The binary sequence.**
 
-Use convertors to make `Bits`.
+Use converters to make `Bits`.
 
     Binary.fromIntegers [ 0, 1, 0, 1 ]
 
 -}
 type Bits
     = Bits (List Bool)
+
+
+{-| An empty binary sequence.
+-}
+empty : Bits
+empty =
+    fromBooleans []
 
 
 
@@ -70,14 +77,8 @@ type Bits
 fromHex : String -> Bits
 fromHex hex =
     hex
-        |> String.toUpper
         |> String.toList
-        |> List.map
-            (\h ->
-                hexToBinaryTable
-                    |> Dict.get h
-                    |> Maybe.withDefault []
-            )
+        |> List.map hexCharToBinary
         |> List.concat
         |> Bits
 
@@ -103,13 +104,7 @@ toHex (Bits bits) =
     in
     bitsWithLeadingZeros
         |> List.greedyGroupsOf 4
-        |> List.map
-            (\a ->
-                hexToBinaryTableList
-                    |> List.find (Tuple.second >> (==) a)
-                    |> Maybe.map Tuple.first
-                    |> Maybe.withDefault '0'
-            )
+        |> List.map (binaryToHexChar >> Maybe.withDefault '0')
         |> String.fromList
 
 
@@ -207,6 +202,69 @@ toBooleans (Bits bits) =
     bits
 
 
+{-| Convert a string to `Bits`.
+
+The resulting bits will represent the decimal value
+(ie. code point) of each character (it uses `String.toList`).
+
+The first argument determines how many bits
+are used per decimal value.
+
+    -- 1 character
+    -- Code points: [ 0x1F936 ]
+
+    >>> "🤶"
+    ..>   |> fromString 32
+    ..>   |> toHex
+    "0001F936"
+
+    -- 3 characters
+    -- Code points: [ 0x61, 0x62, 0x63 ]
+    -- These hexadecimal values are each 8 bits long.
+
+    >>> "abc"
+    ..>   |> fromString 8
+    ..>   |> toHex
+    "616263"
+
+-}
+fromString : Int -> String -> Bits
+fromString amountOfBitsPerCharacter string =
+    string
+        |> String.toList
+        |> List.map (Char.toCode >> fromDecimal >> ensureSize amountOfBitsPerCharacter)
+        |> concat
+
+
+{-| Convert `Bits` to a string.
+
+1.  Splits the bits in chunks of the given number
+2.  Each chunk is converted to a decimal (code point)
+3.  Each code point is translated to a character
+4.  The list of characters is converted to a string
+
+The first argument determines how many bits
+are used per decimal value (ie. how large the chunks are).
+
+    >>> "0001F936"
+    ..>   |> fromHex
+    ..>   |> toString 32
+    "🤶"
+
+    >>> "616263"
+    ..>   |> fromHex
+    ..>   |> toString 8
+    "abc"
+
+-}
+toString : Int -> Bits -> String
+toString amountOfBitsPerCharacter bits =
+    bits
+        |> chunksOf amountOfBitsPerCharacter
+        |> List.map (toDecimal >> Char.fromCode)
+        |> String.fromList
+
+
 
 -- BITWISE OPERATORS
 
@@ -220,7 +278,7 @@ toBooleans (Bits bits) =
     >>> Binary.and
     ..>   (fromHex "5")
     ..>   (fromHex "3")
-    ensureBits 3 (fromHex "1")
+    ensureSize 4 (fromHex "1")
 
 -}
 and : Bits -> Bits -> Bits
@@ -363,11 +421,11 @@ shiftRightZfBy n =
 _NOTE: Make sure your binary sequence is of the correct size before rotating!
 Rotating 8 bits is not always the same as, for example, 16 bits._
 
-    >>> rotateLeftBy 1 (ensureBits 32 <| fromHex "17")
-    ensureBits 32 (fromHex "2E")
+    >>> rotateLeftBy 1 (ensureSize 32 <| fromHex "17")
+    ensureSize 32 (fromHex "2E")
 
-    >>> rotateLeftBy 2 (ensureBits 32 <| fromHex "96")
-    ensureBits 32 (fromHex "258")
+    >>> rotateLeftBy 2 (ensureSize 32 <| fromHex "96")
+    ensureSize 32 (fromHex "258")
 
 -}
 rotateLeftBy : Int -> Bits -> Bits
@@ -380,14 +438,14 @@ rotateLeftBy n =
 _NOTE: Make sure your binary sequence is of the correct size before rotating!
 Rotating 8 bits is not always the same as, for example, 16 bits._
 
-    >>> rotateRightBy 1 (ensureBits 64 <| fromHex "17")
-    ensureBits 64 (fromHex "800000000000000B")
+    >>> rotateRightBy 1 (ensureSize 64 <| fromHex "17")
+    ensureSize 64 (fromHex "800000000000000B")
 
-    >>> rotateRightBy 1 (ensureBits 32 <| fromHex "96")
-    ensureBits 32 (fromHex "4B")
+    >>> rotateRightBy 1 (ensureSize 32 <| fromHex "96")
+    ensureSize 32 (fromHex "4B")
 
-    >>> rotateRightBy 5 (ensureBits 32 <| fromHex "96")
-    ensureBits 32 (fromHex "B0000004")
+    >>> rotateRightBy 5 (ensureSize 32 <| fromHex "96")
+    ensureSize 32 (fromHex "B0000004")
 
 -}
 rotateRightBy : Int -> Bits -> Bits
@@ -604,15 +662,24 @@ dropLeadingZeros =
 
 {-| Ensure the binary sequence length is of certain size.
 
-    >>> ensureBits 4 (fromIntegers [ 1, 0 ])
+    >>> ensureSize 4 (fromIntegers [ 1, 0 ])
     fromIntegers [ 0, 0, 1, 0 ]
 
 -}
-ensureBits : Int -> Bits -> Bits
-ensureBits size (Bits bits) =
-    bits
-        |> (++) (List.repeat (max 0 (size - List.length bits)) False)
-        |> Bits
+ensureSize : Int -> Bits -> Bits
+ensureSize size (Bits bits) =
+    let
+        currentLength =
+            List.length bits
+    in
+    if currentLength == size then
+        Bits bits
+
+    else if currentLength > size then
+        Bits (List.drop (currentLength - size) bits)
+
+    else
+        Bits (List.repeat (size - currentLength) False ++ bits)
 
 
 {-| Makes two sequences isometric (equal in size).
@@ -631,8 +698,8 @@ makeIsometric (Bits a) (Bits b) =
         size =
             max (List.length a) (List.length b)
     in
-    ( ensureBits size (Bits a)
-    , ensureBits size (Bits b)
+    ( ensureSize size (Bits a)
+    , ensureSize size (Bits b)
     )
 
 
@@ -687,27 +754,111 @@ map fn (Bits list) =
 -- CONSTANTS
 
 
-hexToBinaryTableList : List ( Char, List Bool )
-hexToBinaryTableList =
-    [ ( '0', [ False, False, False, False ] )
-    , ( '1', [ False, False, False, True ] )
-    , ( '2', [ False, False, True, False ] )
-    , ( '3', [ False, False, True, True ] )
-    , ( '4', [ False, True, False, False ] )
-    , ( '5', [ False, True, False, True ] )
-    , ( '6', [ False, True, True, False ] )
-    , ( '7', [ False, True, True, True ] )
-    , ( '8', [ True, False, False, False ] )
-    , ( '9', [ True, False, False, True ] )
-    , ( 'A', [ True, False, True, False ] )
-    , ( 'B', [ True, False, True, True ] )
-    , ( 'C', [ True, True, False, False ] )
-    , ( 'D', [ True, True, False, True ] )
-    , ( 'E', [ True, True, True, False ] )
-    , ( 'F', [ True, True, True, True ] )
-    ]
+hexCharToBinary : Char -> List Bool
+hexCharToBinary char =
+    case Char.toUpper char of
+        '0' ->
+            [ False, False, False, False ]
+
+        '1' ->
+            [ False, False, False, True ]
+
+        '2' ->
+            [ False, False, True, False ]
+
+        '3' ->
+            [ False, False, True, True ]
+
+        '4' ->
+            [ False, True, False, False ]
+
+        '5' ->
+            [ False, True, False, True ]
+
+        '6' ->
+            [ False, True, True, False ]
+
+        '7' ->
+            [ False, True, True, True ]
+
+        '8' ->
+            [ True, False, False, False ]
+
+        '9' ->
+            [ True, False, False, True ]
+
+        'A' ->
+            [ True, False, True, False ]
+
+        'B' ->
+            [ True, False, True, True ]
+
+        'C' ->
+            [ True, True, False, False ]
+
+        'D' ->
+            [ True, True, False, True ]
+
+        'E' ->
+            [ True, True, True, False ]
+
+        'F' ->
+            [ True, True, True, True ]
+
+        _ ->
+            []
 
 
-hexToBinaryTable : Dict Char (List Bool)
-hexToBinaryTable =
-    Dict.fromList hexToBinaryTableList
+binaryToHexChar : List Bool -> Maybe Char
+binaryToHexChar binary =
+    case binary of
+        [ False, False, False, False ] ->
+            Just '0'
+
+        [ False, False, False, True ] ->
+            Just '1'
+
+        [ False, False, True, False ] ->
+            Just '2'
+
+        [ False, False, True, True ] ->
+            Just '3'
+
+        [ False, True, False, False ] ->
+            Just '4'
+
+        [ False, True, False, True ] ->
+            Just '5'
+
+        [ False, True, True, False ] ->
+            Just '6'
+
+        [ False, True, True, True ] ->
+            Just '7'
+
+        [ True, False, False, False ] ->
+            Just '8'
+
+        [ True, False, False, True ] ->
+            Just '9'
+
+        [ True, False, True, False ] ->
+            Just 'A'
+
+        [ True, False, True, True ] ->
+            Just 'B'
+
+        [ True, True, False, False ] ->
+            Just 'C'
+
+        [ True, True, False, True ] ->
+            Just 'D'
+
+        [ True, True, True, False ] ->
+            Just 'E'
+
+        [ True, True, True, True ] ->
+            Just 'F'
+
+        _ ->
+            Nothing
