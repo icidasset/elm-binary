@@ -25,17 +25,12 @@ Work with sequences of [binary numbers](https://en.wikipedia.org/wiki/Binary_num
 - Booleans
 - Strings
 
-#### TODO
-
-- Bytes
-
 
 ### Operations
 
 - Basics: and, or, xor, not (complement)
 - Shifting: left & right shift, left & right rotation
 - Maths: add, subtract
-
 
 
 ### Utilities

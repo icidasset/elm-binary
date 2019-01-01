@@ -61,7 +61,7 @@ type Bits
 -}
 empty : Bits
 empty =
-    fromBooleans []
+    Bits []
 
 
 
@@ -78,8 +78,7 @@ fromHex : String -> Bits
 fromHex hex =
     hex
         |> String.toList
-        |> List.map hexCharToBinary
-        |> List.concat
+        |> concatMap hexCharToBinary
         |> Bits
 
 
@@ -143,11 +142,10 @@ fromDecimal_ acc n =
 -}
 toDecimal : Bits -> Int
 toDecimal (Bits bits) =
-    Bits bits
-        |> toIntegers
+    bits
         |> List.foldl
             (\bit ( x, exponent ) ->
-                ( (2 ^ exponent) * bit + x
+                ( (2 ^ exponent) * ifThenElse bit 1 0 + x
                 , exponent - 1
                 )
             )
@@ -177,7 +175,7 @@ fromIntegers =
 -}
 toIntegers : Bits -> List Int
 toIntegers (Bits bits) =
-    List.map (\b -> ifThenElse (b == False) 0 1) bits
+    List.map (\b -> ifThenElse b 1 0) bits
 
 
 {-| Convert a list of booleans to `Bits`.
@@ -232,8 +230,17 @@ fromString : Int -> String -> Bits
 fromString amountOfBitsPerCharacter string =
     string
         |> String.toList
-        |> List.map (Char.toCode >> fromDecimal >> ensureSize amountOfBitsPerCharacter)
-        |> concat
+        |> concatMap (fromString_ amountOfBitsPerCharacter)
+        |> Bits
+
+
+fromString_ : Int -> Char -> List Bool
+fromString_ amountOfBitsPerCharacter char =
+    char
+        |> Char.toCode
+        |> fromDecimal
+        |> ensureSize amountOfBitsPerCharacter
+        |> unwrap
 
 
 {-| Convert `Bits` to a string.
@@ -283,9 +290,7 @@ toString amountOfBitsPerCharacter bits =
 -}
 and : Bits -> Bits -> Bits
 and a b =
-    condense
-        (\( x, y ) -> x && y)
-        (makeIsometric a b)
+    condense (&&) (makeIsometric a b)
 
 
 {-| OR operator.
@@ -302,9 +307,7 @@ and a b =
 -}
 or : Bits -> Bits -> Bits
 or a b =
-    condense
-        (\( x, y ) -> x || y)
-        (makeIsometric a b)
+    condense (||) (makeIsometric a b)
 
 
 {-| XOR operator.
@@ -321,9 +324,7 @@ or a b =
 -}
 xor : Bits -> Bits -> Bits
 xor a b =
-    condense
-        (\( x, y ) -> Basics.xor x y)
-        (makeIsometric a b)
+    condense Basics.xor (makeIsometric a b)
 
 
 {-| NOT operator.
@@ -382,13 +383,14 @@ shiftRightBy n =
 shiftRightBy_ : Int -> List Bool -> List Bool
 shiftRightBy_ n bits =
     if n > 0 then
-        let
-            firstBit =
-                Maybe.withDefault False (List.head bits)
-        in
-        shiftRightBy_
-            (n - 1)
-            (firstBit :: List.take (List.length bits - 1) bits)
+        case List.head bits of
+            Just firstBit ->
+                shiftRightBy_
+                    (n - 1)
+                    (firstBit :: List.take (List.length bits - 1) bits)
+
+            Nothing ->
+                []
 
     else
         bits
@@ -450,7 +452,7 @@ Rotating 8 bits is not always the same as, for example, 16 bits._
 -}
 rotateRightBy : Int -> Bits -> Bits
 rotateRightBy n =
-    map (\bits -> List.drop (List.length bits - n) bits ++ List.take (List.length bits - n) bits)
+    map (\bits -> List.splitAt (List.length bits - n) bits |> (\( a, b ) -> b ++ a))
 
 
 
@@ -642,11 +644,8 @@ chunksOf n (Bits bits) =
 
 -}
 concat : List Bits -> Bits
-concat list =
-    list
-        |> List.map (\(Bits bits) -> bits)
-        |> List.concat
-        |> Bits
+concat =
+    concatMap unwrap >> Bits
 
 
 {-| Drops the leading zeros of a binary sequence.
@@ -721,9 +720,16 @@ width (Bits bits) =
 ------------------------------------------------------------------------
 
 
-condense : (( Bool, Bool ) -> Bool) -> ( Bits, Bits ) -> Bits
+{-| A slightly faster alternative for List.concatMap
+-}
+concatMap : (a -> List b) -> List a -> List b
+concatMap fn =
+    List.foldr (\a -> List.append (fn a)) []
+
+
+condense : (Bool -> Bool -> Bool) -> ( Bits, Bits ) -> Bits
 condense fn ( Bits a, Bits b ) =
-    Bits (List.map fn (List.zip a b))
+    Bits (List.map2 fn a b)
 
 
 ifThenElse : Bool -> a -> a -> a
@@ -748,6 +754,11 @@ isJust m =
 map : (List Bool -> List Bool) -> Bits -> Bits
 map fn (Bits list) =
     Bits (fn list)
+
+
+unwrap : Bits -> List Bool
+unwrap (Bits bits) =
+    bits
 
 
 

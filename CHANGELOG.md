@@ -1,6 +1,11 @@
 # Changelog
 
 
+#### 2.0.1
+
+- More performance improvements
+
+
 #### 2.0.0
 
 - Renamed `ensureBits` to `ensureSize`.
