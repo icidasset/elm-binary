@@ -1,4 +1,12 @@
+.PHONY: benchmarks
+
+
 all: docs test
+
+
+# Benchmarks
+benchmarks:
+	(cd benchmarks; elm make Benchmarks.elm --output benchmarks.html)
 
 
 # Generate documentation
