@@ -376,24 +376,13 @@ shiftLeftBy n =
 
 -}
 shiftRightBy : Int -> Bits -> Bits
-shiftRightBy n =
-    map (shiftRightBy_ n)
+shiftRightBy n (Bits bits) =
+    case bits of
+        firstBit :: _ ->
+            Bits <| List.repeat n firstBit ++ List.take (List.length bits - n) bits
 
-
-shiftRightBy_ : Int -> List Bool -> List Bool
-shiftRightBy_ n bits =
-    if n > 0 then
-        case List.head bits of
-            Just firstBit ->
-                shiftRightBy_
-                    (n - 1)
-                    (firstBit :: List.take (List.length bits - 1) bits)
-
-            Nothing ->
-                []
-
-    else
-        bits
+        [] ->
+            Bits <| []
 
 
 {-| Logical right shift.
@@ -409,13 +398,11 @@ shiftRightBy_ n bits =
 
 -}
 shiftRightZfBy : Int -> Bits -> Bits
-shiftRightZfBy n =
-    map
-        (\bits ->
-            List.append
-                (List.repeat n False)
-                (List.take (max 0 (List.length bits - n)) bits)
-        )
+shiftRightZfBy n (Bits bits) =
+    List.append
+        (List.repeat n False)
+        (List.take (List.length bits - n) bits)
+        |> Bits
 
 
 {-| Rotate a binary sequence to the left.
@@ -692,14 +679,21 @@ ensureSize size (Bits bits) =
 
 -}
 makeIsometric : Bits -> Bits -> ( Bits, Bits )
-makeIsometric (Bits a) (Bits b) =
+makeIsometric a b =
     let
-        size =
-            max (List.length a) (List.length b)
+        ( widthA, widthB ) =
+            ( width a
+            , width b
+            )
     in
-    ( ensureSize size (Bits a)
-    , ensureSize size (Bits b)
-    )
+    if widthA == widthB then
+        ( a, b )
+
+    else if widthA > widthB then
+        ( a, ensureSize widthA b )
+
+    else
+        ( ensureSize widthB a, b )
 
 
 {-| Get the amount of bits in a binary sequence.
@@ -715,15 +709,14 @@ width (Bits bits) =
 
 
 
-------------------------------------------------------------------------
+-----------------------------------------
 -- PRIVATE
-------------------------------------------------------------------------
+-----------------------------------------
 
 
-{-| A slightly faster alternative for List.concatMap
--}
 concatMap : (a -> List b) -> List a -> List b
 concatMap fn =
+    -- A slightly faster alternative for List.concatMap
     List.foldr (\a -> List.append (fn a)) []
 
 
