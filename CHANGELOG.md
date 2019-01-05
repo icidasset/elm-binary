@@ -1,9 +1,14 @@
 # Changelog
 
 
+#### 2.1.0
+
+Added `fromStringAsUtf8` function.
+
+
 #### 2.0.1 & 2.0.2
 
-- More performance improvements
+More performance improvements.
 
 
 #### 2.0.0
@@ -17,12 +22,12 @@
 
 #### 1.3.0
 
-- Added `append` function.
+Added `append` function.
 
 
 #### 1.2.1
 
-- Does no longer drop leading zeros when using `fromHex` and/or `toHex`.
+Does no longer drop leading zeros when using `fromHex` and/or `toHex`.
 
 
 #### 1.2.0

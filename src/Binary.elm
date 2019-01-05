@@ -1,6 +1,6 @@
 module Binary exposing
     ( Bits, empty
-    , fromHex, toHex, fromDecimal, toDecimal, fromIntegers, toIntegers, fromBooleans, toBooleans, fromString, toString
+    , fromHex, toHex, fromDecimal, toDecimal, fromIntegers, toIntegers, fromBooleans, toBooleans, fromString, fromStringAsUtf8, toString
     , and, or, xor, not
     , shiftLeftBy, shiftRightBy, shiftRightZfBy, rotateLeftBy, rotateRightBy
     , add, subtract
@@ -14,7 +14,7 @@ module Binary exposing
 
 # Converters
 
-@docs fromHex, toHex, fromDecimal, toDecimal, fromIntegers, toIntegers, fromBooleans, toBooleans, fromString, toString
+@docs fromHex, toHex, fromDecimal, toDecimal, fromIntegers, toIntegers, fromBooleans, toBooleans, fromString, fromStringAsUtf8, toString
 
 
 # Bitwise Operators
@@ -38,7 +38,6 @@ module Binary exposing
 
 -}
 
-import Dict exposing (Dict)
 import List.Extra as List
 
 
@@ -208,6 +207,11 @@ The resulting bits will represent the decimal value
 The first argument determines how many bits
 are used per decimal value.
 
+WARNING: This assumes each character will fit into the range you defined.
+For example, an emoji will not fit in 8 bits, so you can't use `fromString 8`.
+That said, you can use `fromStringAsUtf8` to make sure each character
+is split up into multiple UTF-8 characters.
+
     -- 1 character
     -- Code points: [ 0x1F936 ]
 
@@ -241,6 +245,34 @@ fromString_ amountOfBitsPerCharacter char =
         |> fromDecimal
         |> ensureSize amountOfBitsPerCharacter
         |> unwrap
+
+
+{-| Convert a string to UTF-8 `Bits`.
+
+This will convert every character into multiple UTF-8 codepoints,
+if necessary, and then use 8 bits per character.
+
+NOTE: This is not the same as the `fromString 8` function!
+Which assumes every character is already UTF-8.
+Or, in other words, assumes that each character's codepoint is below 128.
+
+    >>> "🤶"
+    ..>   |> fromStringAsUtf8
+    ..>   |> toHex
+    "F09FA4B6"
+
+    >>> "abc"
+    ..>   |> fromStringAsUtf8
+    ..>   |> toHex
+    "616263"
+
+-}
+fromStringAsUtf8 : String -> Bits
+fromStringAsUtf8 string =
+    string
+        |> String.toList
+        |> List.concatMap unicodeCharToUtf8Bits
+        |> fromIntegers
 
 
 {-| Convert `Bits` to a string.
@@ -866,3 +898,76 @@ binaryToHexChar binary =
 
         _ ->
             Nothing
+
+
+
+-- TEXT ENCODING
+
+
+{-| Translate a single unicode code-point to multiple utf-8 code-points.
+-}
+unicodeCharToUtf8Bits : Char -> List Int
+unicodeCharToUtf8Bits char =
+    let
+        codepoint =
+            Char.toCode char
+    in
+    if codepoint < 128 then
+        -- 1-bit UTF-8
+        codepoint
+            |> fromDecimal
+            |> ensureSize 8
+            |> toIntegers
+
+    else if codepoint < 2048 then
+        -- 2-bit UTF-8
+        unicodeCharToUtf8Bits_
+            [ [ 1, 1, 0 ]
+            , [ 1, 0 ]
+            ]
+            codepoint
+
+    else if codepoint < 65536 then
+        -- 3-bit UTF-8
+        unicodeCharToUtf8Bits_
+            [ [ 1, 1, 1, 0 ]
+            , [ 1, 0 ]
+            , [ 1, 0 ]
+            ]
+            codepoint
+
+    else
+        -- 4-bit UTF-8
+        unicodeCharToUtf8Bits_
+            [ [ 1, 1, 1, 1, 0 ]
+            , [ 1, 0 ]
+            , [ 1, 0 ]
+            , [ 1, 0 ]
+            ]
+            codepoint
+
+
+unicodeCharToUtf8Bits_ : List (List Int) -> Int -> List Int
+unicodeCharToUtf8Bits_ startingBits codepoint =
+    startingBits
+        |> List.foldr
+            (\start ( all, acc ) ->
+                let
+                    takeAway =
+                        8 - List.length start
+
+                    ( end, rest ) =
+                        List.splitAt takeAway acc
+                in
+                ( start ++ List.reverse end ++ all
+                , rest
+                )
+            )
+            ( []
+            , codepoint
+                |> fromDecimal
+                |> ensureSize (8 * List.length startingBits)
+                |> toIntegers
+                |> List.reverse
+            )
+        |> Tuple.first
